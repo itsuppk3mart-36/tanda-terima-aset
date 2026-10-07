@@ -108,6 +108,7 @@ button{cursor:pointer}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap}
 .pill.ok{background:var(--k3-soft);color:var(--k3-deep)}
 .pill.wait{background:var(--warn-soft);color:var(--warn)}
+.pill.late{background:var(--danger-soft);color:var(--danger)}
 .pill i{width:6px;height:6px;border-radius:50%;background:currentColor}
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
 .empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
@@ -133,6 +134,7 @@ textarea.in{min-height:72px;resize:vertical}
 .types{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .type{position:relative;border:1.5px solid var(--line-strong);border-radius:var(--r);background:var(--surface);padding:14px 12px;text-align:left;display:flex;flex-direction:column;gap:6px}
 .type svg{width:26px;height:26px;color:var(--muted)}
+.type .tx{display:flex;flex-direction:column;gap:4px;min-width:0}
 .type b{font-size:14px;line-height:1.25}
 .type span{font-size:12px;color:var(--muted);line-height:1.35}
 .type .code{position:absolute;top:10px;right:10px;font-family:var(--f-mono);font-size:11px;color:var(--faint)}
@@ -311,8 +313,17 @@ const JENIS = {
     p1:"Pengirim",p1s:"Tim IT",p2:"Penerima di Toko",p2s:"Kepala toko / PIC",verb:"pengiriman"},
   kembali:{code:"KBL",label:"Pengembalian Aset",short:"Kembali",desc:"Aset dikembalikan ke Tim IT (resign, rusak, tukar)",
     title:"Berita Acara Pengembalian Aset",
-    p1:"Yang Mengembalikan",p1s:"Karyawan / toko",p2:"Diterima oleh",p2s:"Tim IT",verb:"pengembalian"}
+    p1:"Yang Mengembalikan",p1s:"Karyawan / toko",p2:"Diterima oleh",p2s:"Tim IT",verb:"pengembalian"},
+  eksternal:{code:"EKS",label:"Serah Terima ke Pihak Eksternal",short:"Eksternal",desc:"Aset dibawa / dipinjam vendor, teknisi, mitra, atau tamu",
+    title:"Berita Acara Serah Terima Aset ke Pihak Eksternal",
+    p1:"Yang Menyerahkan",p1s:"Tim IT K3Mart",p2:"Penerima Eksternal",p2s:"Vendor / teknisi / mitra",verb:"serah terima"},
+  terimaeks:{code:"TRM",label:"Penerimaan dari Eksternal",short:"Terima",desc:"Aset diterima K3Mart dari vendor, teknisi, atau mitra",
+    title:"Berita Acara Penerimaan Aset dari Pihak Eksternal",
+    p1:"Yang Menyerahkan",p1s:"Vendor / teknisi / mitra",p2:"Yang Menerima",p2s:"Tim IT K3Mart",verb:"penerimaan"}
 };
+const EKS_TIPE = ["Vendor / supplier","Teknisi / kontraktor","Mitra / franchise","Perorangan / tamu"];
+const isExt = j => j==="eksternal" || j==="terimaeks";
+const itSide = j => (j==="kembali" || j==="terimaeks") ? "p2" : "p1";
 const KATEGORI = ["Laptop","PC / CPU","Monitor","Handphone","Tablet","POS / Mesin Kasir","Printer","Printer Struk","Barcode Scanner","CCTV","DVR / NVR","UPS","Perangkat Jaringan","Aksesoris","Lainnya"];
 const KONDISI = ["Baru","Baik","Rusak Ringan","Rusak Berat"];
 const ALASAN = ["Resign","Mutasi / pindah unit","Rusak","Tukar / upgrade","Selesai dipinjam","Toko tutup / renovasi","Lainnya"];
@@ -326,6 +337,8 @@ const ICON = {
   karyawan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6"/></svg>',
   toko:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.5 5 4.5h14l1.5 5"/><path d="M3.5 9.5c0 1.4 1.1 2.5 2.6 2.5s2.6-1.1 2.6-2.5c0 1.4 1.1 2.5 2.6 2.5h1.4c1.5 0 2.6-1.1 2.6-2.5 0 1.4 1.1 2.5 2.6 2.5s2.6-1.1 2.6-2.5"/><path d="M5 12v7.5h14V12"/><path d="M10 19.5v-4.5h4v4.5"/></svg>',
   kembali:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
+  eksternal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 4.5H4.5v15h5"/><path d="M13 7.5l5 4.5-5 4.5"/><path d="M18 12H8.5"/></svg>',
+  terimaeks:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.5h5v15h-5"/><path d="M11 7.5L6 12l5 4.5"/><path d="M6 12h9.5"/></svg>',
   search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
@@ -342,6 +355,10 @@ const parseISO = s=>{const [y,m,d]=(s||todayISO()).split("-").map(Number);return
 const tglPanjang = s=>{const d=parseISO(s);return `${HARI[d.getDay()]}, ${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`};
 const tglPendek = s=>{const d=parseISO(s);return `${d.getDate()} ${BULAN[d.getMonth()].slice(0,3)} ${d.getFullYear()}`};
 const uid = ()=>"r"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const fmtRp = v=>{ const n=String(v==null?"":v).replace(/[^\d]/g,""); return n?"Rp "+Number(n).toLocaleString("id-ID"):""; };
+const telat = r=> r.jenis==="eksternal" && r.eks && r.eks.kembaliPada && r.eks.kembaliPada < todayISO();
+function blankEks(){ return {tipe:EKS_TIPE[0],perusahaan:"",alamat:"",telp:"",npwp:"",dokumen:"",kembaliPada:"",nilai:"",jaminan:""}; }
+function normDraft(d){ d.toko=d.toko||{kode:"",nama:"",alamat:""}; d.kirim=d.kirim||{ekspedisi:"",resi:""}; d.eks=Object.assign(blankEks(),d.eks||{}); d.photos=d.photos||[]; d.ttd=d.ttd||{p1:"",p2:""}; d.items=d.items&&d.items.length?d.items:[newItem()]; return d; }
 const statusOf = r=> (r.ttd && r.ttd.p1 && r.ttd.p2) ? "selesai" : "menunggu";
 const STANDALONE = !(window.claude && typeof window.claude.use==="function");
 const canSave = ()=> !!Store.downloads || STANDALONE;
@@ -431,11 +448,11 @@ function newItem(){return {kategori:"Laptop",nama:"",kode:"",sn:"",qty:1,kondisi
 function blankParty(){return {nama:"",nik:"",jabatan:"",unit:""}}
 function newDraft(jenis){
   const p=petugas();
-  const d={id:null,jenis:jenis||"karyawan",tanggal:todayISO(),p1:blankParty(),p2:blankParty(),toko:{kode:"",nama:"",alamat:""},kirim:{ekspedisi:"",resi:""},alasan:"",items:[newItem()],catatan:"",photos:[],ttd:{p1:"",p2:""}};
+  const d={id:null,jenis:jenis||"karyawan",tanggal:todayISO(),p1:blankParty(),p2:blankParty(),toko:{kode:"",nama:"",alamat:""},kirim:{ekspedisi:"",resi:""},eks:blankEks(),alasan:"",items:[newItem()],catatan:"",photos:[],ttd:{p1:"",p2:""}};
   applyPetugas(d,p); return d;
 }
 function applyPetugas(d,p){
-  const it = d.jenis==="kembali" ? "p2":"p1", other = it==="p1"?"p2":"p1";
+  const it = itSide(d.jenis), other = it==="p1"?"p2":"p1";
   if(!d[it].nama && p.nama) d[it]=Object.assign({},p);
   if(d[other].nama && d[other].nama===p.nama) d[other]=blankParty();
 }
@@ -462,7 +479,7 @@ function filtered(){
     if(S.fj!=="semua" && r.jenis!==S.fj) return false;
     if(S.fs!=="semua" && statusOf(r)!==S.fs) return false;
     if(!q) return true;
-    const hay=[r.no,r.p1&&r.p1.nama,r.p2&&r.p2.nama,r.p2&&r.p2.nik,r.toko&&r.toko.kode,r.toko&&r.toko.nama,...(r.items||[]).flatMap(i=>[i.nama,i.sn,i.kode,i.kategori])].join(" ").toLowerCase();
+    const hay=[r.no,r.p1&&r.p1.nama,r.p2&&r.p2.nama,r.p2&&r.p2.nik,r.toko&&r.toko.kode,r.toko&&r.toko.nama,r.eks&&r.eks.perusahaan,r.eks&&r.eks.dokumen,...(r.items||[]).flatMap(i=>[i.nama,i.sn,i.kode,i.kategori])].join(" ").toLowerCase();
     return hay.includes(q);
   });
 }
@@ -487,7 +504,7 @@ function viewList(){
   </div>
   <div class="filters">
     <label class="search">${ICON.search}<input id="q" type="search" placeholder="Cari no. dokumen, nama, SN, kode toko…" value="${esc(S.q)}" aria-label="Cari"></label>
-    <div class="chips" role="group" aria-label="Jenis">${chip("j","semua","Semua")}${chip("j","karyawan","Karyawan")}${chip("j","toko","Toko")}${chip("j","kembali","Kembali")}</div>
+    <div class="chips" role="group" aria-label="Jenis">${chip("j","semua","Semua")}${chip("j","karyawan","Karyawan")}${chip("j","toko","Toko")}${chip("j","kembali","Kembali")}${chip("j","eksternal","Eksternal")}${chip("j","terimaeks","Terima")}</div>
     <div class="chips" role="group" aria-label="Status">${chip("s","menunggu","Menunggu TTD")}${chip("s","selesai","Selesai")}</div>
     ${S.records.length&&canSave()?`<button class="btn ghost" data-act="csv">${ICON.pdf}CSV</button>`:""}
   </div>
@@ -496,14 +513,16 @@ function viewList(){
 }
 function rowHTML(r){
   const st=statusOf(r), items=r.items||[], first=items[0]||{};
-  const who = r.jenis==="kembali" ? (r.p1&&r.p1.nama) : (r.p2&&r.p2.nama);
-  const where = r.jenis==="toko" ? [r.toko&&r.toko.kode,r.toko&&r.toko.nama].filter(Boolean).join(" · ") : (r.jenis==="kembali"?(r.alasan||r.p1&&r.p1.unit):(r.p2&&r.p2.unit));
+  const who = itSide(r.jenis)==="p2" ? (r.p1&&r.p1.nama) : (r.p2&&r.p2.nama);
+  const where = r.jenis==="toko" ? [r.toko&&r.toko.kode,r.toko&&r.toko.nama].filter(Boolean).join(" · ")
+    : isExt(r.jenis) ? ((r.eks&&(r.eks.perusahaan||r.eks.tipe))||"")
+    : (r.jenis==="kembali"?(r.alasan||r.p1&&r.p1.unit):(r.p2&&r.p2.unit));
   const what = items.length ? esc(first.nama||first.kategori)+(items.length>1?` +${items.length-1} lainnya`:"") : "—";
   return `<button class="row" data-act="open" data-id="${esc(r.id)}">
     <div><div class="no">${esc(r.no)}</div><div class="date">${tglPendek(r.tanggal)}</div></div>
     <div class="c-who"><div class="who"><span class="tag${r.contoh?" ex":""}">${r.contoh?"Contoh · ":""}${JENIS[r.jenis].short}</span>${esc(who||"—")}</div><div class="what">${where?esc(where)+" — ":""}${what}</div></div>
     <div class="n">${items.reduce((a,i)=>a+(+i.qty||1),0)} unit</div>
-    <div>${st==="selesai"?'<span class="pill ok"><i></i>Selesai</span>':'<span class="pill wait"><i></i>Menunggu TTD</span>'}</div>
+    <div>${telat(r)?'<span class="pill late"><i></i>Telat kembali</span> ':""}${st==="selesai"?'<span class="pill ok"><i></i>Selesai</span>':'<span class="pill wait"><i></i>Menunggu TTD</span>'}</div>
   </button>`;
 }
 function emptyHTML(){
@@ -515,15 +534,16 @@ function emptyHTML(){
 /* ---------- form ---------- */
 function partyFields(key,d,labels){
   const p=d[key], pre=key;
-  const isIT = (d.jenis==="kembali") ? key==="p2" : key==="p1";
+  const isIT = itSide(d.jenis)===key;
+  const ext = isExt(d.jenis) && !isIT;
   const unitLbl = isIT ? "Divisi / unit" : (d.jenis==="toko" ? "Unit / area" : "Departemen / unit");
   return `<div class="party">
     <h4>${labels[0]} <small>${labels[1]}</small></h4>
     <div class="grid">
       <div class="field"><label for="${pre}_nama">Nama lengkap <em>*</em></label><input class="in" id="${pre}_nama" data-b="${pre}.nama" value="${esc(p.nama)}" autocomplete="off"></div>
-      <div class="field"><label for="${pre}_nik">NIK karyawan</label><input class="in mono" id="${pre}_nik" data-b="${pre}.nik" value="${esc(p.nik)}" inputmode="numeric"></div>
+      <div class="field"><label for="${pre}_nik">${ext?"No. KTP / identitas":"NIK karyawan"}</label><input class="in mono" id="${pre}_nik" data-b="${pre}.nik" value="${esc(p.nik)}" inputmode="numeric"></div>
       <div class="field"><label for="${pre}_jabatan">Jabatan</label><input class="in" id="${pre}_jabatan" data-b="${pre}.jabatan" value="${esc(p.jabatan)}"></div>
-      ${d.jenis==="toko" && !isIT ? "" : `<div class="field"><label for="${pre}_unit">${unitLbl}</label><input class="in" id="${pre}_unit" data-b="${pre}.unit" value="${esc(p.unit)}"></div>`}
+      ${(d.jenis==="toko" && !isIT) || ext ? "" : `<div class="field"><label for="${pre}_unit">${unitLbl}</label><input class="in" id="${pre}_unit" data-b="${pre}.unit" value="${esc(p.unit)}"></div>`}
     </div>
     ${isIT?`<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted)"><input type="checkbox" id="rememberIT" ${p.nama&&p.nama===petugas().nama?"checked":""}> Ingat sebagai petugas IT default di perangkat ini</label>`:""}
   </div>`;
@@ -552,13 +572,29 @@ function viewForm(){
     <section class="sec">
       <div class="sec-h"><span class="num">1 / 5</span><h3>Jenis &amp; tanggal</h3></div>
       <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="types" role="radiogroup" aria-label="Jenis tanda terima">${typeTile("karyawan")}${typeTile("toko")}${typeTile("kembali")}</div>
+        <div class="types" role="radiogroup" aria-label="Jenis tanda terima">${typeTile("karyawan")}${typeTile("toko")}${typeTile("kembali")}${typeTile("eksternal")}${typeTile("terimaeks")}</div>
         <div class="grid">
           <div class="field"><label for="tanggal">Tanggal <em>*</em></label><input class="in" type="date" id="tanggal" data-b="tanggal" value="${esc(d.tanggal)}"></div>
           ${d.jenis==="kembali"?`<div class="field"><label for="alasan">Alasan pengembalian</label><select class="in" id="alasan" data-b="alasan"><option value="">— pilih —</option>${ALASAN.map(a=>`<option${a===d.alasan?" selected":""}>${a}</option>`).join("")}</select></div>`:""}
         </div>
       </div>
     </section>
+    ${isExt(d.jenis)?`
+    <section class="sec">
+      <div class="sec-h"><span class="num">·</span><h3>Pihak eksternal</h3><p>Identitas pihak di luar K3Mart.</p></div>
+      <div class="grid">
+        <div class="field"><label for="eks_tipe">Jenis pihak</label><select class="in" id="eks_tipe" data-b="eks.tipe">${EKS_TIPE.map(x=>`<option${x===d.eks.tipe?" selected":""}>${esc(x)}</option>`).join("")}</select></div>
+        <div class="field"><label for="eks_perusahaan">Nama perusahaan / instansi ${d.eks.tipe==="Perorangan / tamu"?"":"<em>*</em>"}</label><input class="in" id="eks_perusahaan" data-b="eks.perusahaan" value="${esc(d.eks.perusahaan)}" placeholder="PT Sumber Teknologi"></div>
+        <div class="field full"><label for="eks_alamat">Alamat</label><input class="in" id="eks_alamat" data-b="eks.alamat" value="${esc(d.eks.alamat)}"></div>
+        <div class="field"><label for="eks_telp">No. telepon PIC</label><input class="in mono" id="eks_telp" data-b="eks.telp" value="${esc(d.eks.telp)}" inputmode="tel"></div>
+        <div class="field"><label for="eks_npwp">NPWP</label><input class="in mono" id="eks_npwp" data-b="eks.npwp" value="${esc(d.eks.npwp)}" inputmode="numeric"></div>
+        <div class="field"><label for="eks_dokumen">No. PO / SPK / kontrak</label><input class="in mono" id="eks_dokumen" data-b="eks.dokumen" value="${esc(d.eks.dokumen)}"></div>
+        ${d.jenis==="eksternal"?`
+        <div class="field"><label for="eks_kembali">Wajib kembali pada</label><input class="in" type="date" id="eks_kembali" data-b="eks.kembaliPada" value="${esc(d.eks.kembaliPada)}"></div>
+        <div class="field"><label for="eks_nilai">Estimasi nilai aset (Rp)</label><input class="in mono" id="eks_nilai" data-b="eks.nilai" value="${esc(d.eks.nilai)}" inputmode="numeric" placeholder="12500000"></div>
+        <div class="field full"><label for="eks_jaminan">Jaminan / catatan</label><input class="in" id="eks_jaminan" data-b="eks.jaminan" value="${esc(d.eks.jaminan)}" placeholder="mis. fotokopi KTP PIC + surat tugas vendor"></div>`:""}
+      </div>
+    </section>`:""}
     ${d.jenis==="toko"?`
     <section class="sec">
       <div class="sec-h"><span class="num">·</span><h3>Toko tujuan</h3><p>Cabang yang menerima aset.</p></div>
@@ -614,6 +650,7 @@ function setPath(obj,path,val){const ks=path.split(".");let o=obj;for(let i=0;i<
 
 function validate(d){
   if(!d.tanggal) return ["tanggal","Isi tanggal dokumen."];
+  if(isExt(d.jenis) && d.eks.tipe!=="Perorangan / tamu" && !d.eks.perusahaan.trim()) return ["eks_perusahaan","Isi nama perusahaan / instansi pihak eksternal."];
   if(d.jenis==="toko"){ if(!d.toko.kode.trim()) return ["toko_kode","Isi kode toko tujuan."]; if(!d.toko.nama.trim()) return ["toko_nama","Isi nama toko tujuan."]; }
   if(!d.p1.nama.trim()) return ["p1_nama",`Isi nama ${JENIS[d.jenis].p1.toLowerCase()}.`];
   if(!d.p2.nama.trim()) return ["p2_nama",`Isi nama ${JENIS[d.jenis].p2.toLowerCase()}.`];
@@ -630,12 +667,12 @@ async function submitForm(){
   try{
     await ready;
     const remember=$("#rememberIT");
-    const itKey = d.jenis==="kembali"?"p2":"p1";
+    const itKey = itSide(d.jenis);
     if(remember && remember.checked) lsSet(LS_PETUGAS,Object.assign({},d[itKey]));
     const now=Date.now();
     const rec={
       id:d.id||uid(), no:d.no||nextNo(d.jenis,d.tanggal), jenis:d.jenis, tanggal:d.tanggal,
-      p1:d.p1, p2:d.p2, toko:d.jenis==="toko"?d.toko:null, kirim:d.jenis==="toko"?d.kirim:null, alasan:d.jenis==="kembali"?d.alasan:"",
+      p1:d.p1, p2:d.p2, toko:d.jenis==="toko"?d.toko:null, kirim:d.jenis==="toko"?d.kirim:null, eks:isExt(d.jenis)?d.eks:null, alasan:d.jenis==="kembali"?d.alasan:"",
       items:d.items.map(i=>({kategori:i.kategori,nama:String(i.nama).trim(),kode:String(i.kode||"").trim(),sn:String(i.sn||"").trim(),qty:Math.max(1,parseInt(i.qty,10)||1),kondisi:i.kondisi})),
       catatan:d.catatan, photos:d.photos, ttd:d.ttd, createdAt:d.createdAt||now, updatedAt:now, contoh:!!d.contoh
     };
@@ -652,20 +689,22 @@ async function submitForm(){
 function docHTML(r,opts){
   const J=JENIS[r.jenis], st=statusOf(r), interactive=opts&&opts.interactive;
   const kv=(rows)=>`<dl class="kv">${rows.filter(x=>x[1]).map(([k,v])=>`<dt>${k}</dt><dd class="c">:</dd><dd>${esc(v)}</dd>`).join("")}</dl>`;
-  const party=(p)=>kv([["Nama",p.nama||"-"],["NIK",p.nik],["Jabatan",p.jabatan],["Unit",p.unit]]);
+  const idLbl=(k)=> (isExt(r.jenis) && itSide(r.jenis)!==k) ? "No. KTP / ID" : "NIK";
+  const party=(p,k)=>kv([["Nama",p.nama||"-"],[idLbl(k),p.nik],["Jabatan",p.jabatan],["Unit",p.unit]]);
   const total=(r.items||[]).reduce((a,i)=>a+(+i.qty||1),0);
   const intro = r.jenis==="toko"
     ? `Pada hari ini <b>${tglPanjang(r.tanggal)}</b>, telah dilakukan pengiriman aset milik PT. Katiga Ritel Strengindo (K3Mart) ke toko tujuan dengan rincian sebagai berikut:`
     : `Pada hari ini <b>${tglPanjang(r.tanggal)}</b>, yang bertanda tangan di bawah ini:`;
-  const sig=(k,role)=>`<div><div class="role">${role},</div>${k==="p2"&&st==="selesai"?`<div class="stamp" aria-label="Diterima"><b>DITERIMA</b><span>${esc(tglPendek(r.tanggal)).toUpperCase()} · IT-K3</span></div>`:""}<div class="space">${r.ttd&&r.ttd[k]?`<img src="${r.ttd[k]}" alt="Tanda tangan">`:(interactive?`<button class="signhere no-print" data-act="signDoc" data-k="${k}">Ketuk untuk tanda tangan</button>`:"")}</div><div class="name">${esc(r[k].nama||"(....................)")}</div><div class="sub">${esc([r[k].jabatan,r[k].nik?"NIK "+r[k].nik:""].filter(Boolean).join(" · "))}</div></div>`;
+  const sig=(k,role)=>`<div><div class="role">${role},</div>${k==="p2"&&st==="selesai"?`<div class="stamp" aria-label="Diterima"><b>DITERIMA</b><span>${esc(tglPendek(r.tanggal)).toUpperCase()} · IT-K3</span></div>`:""}<div class="space">${r.ttd&&r.ttd[k]?`<img src="${r.ttd[k]}" alt="Tanda tangan">`:(interactive?`<button class="signhere no-print" data-act="signDoc" data-k="${k}">Ketuk untuk tanda tangan</button>`:"")}</div><div class="name">${esc(r[k].nama||"(....................)")}</div><div class="sub">${esc([r[k].jabatan,r[k].nik?idLbl(k)+" "+r[k].nik:""].filter(Boolean).join(" · "))}</div></div>`;
   const d=parseISO(r.tanggal);
   return `<article class="sheet" id="sheet">
     <div class="kop"><img class="logo" src="${LOGO}" alt="K3Mart"><div class="co"><b>PT. Katiga Ritel Strengindo</b><span>K3Mart · Divisi Information Technology</span></div></div>
     <div class="dtitle"><h2>${J.title}</h2><div class="dno">No. ${esc(r.no)}</div></div>
     <p>${intro}</p>
+    ${isExt(r.jenis)&&r.eks?`<div class="plabel">Pihak eksternal</div>${kv([["Jenis pihak",r.eks.tipe],["Perusahaan",r.eks.perusahaan],["Alamat",r.eks.alamat],["Telepon",r.eks.telp],["NPWP",r.eks.npwp],["No. dokumen",r.eks.dokumen],["Wajib kembali",r.eks.kembaliPada?tglPanjang(r.eks.kembaliPada):""],["Estimasi nilai",fmtRp(r.eks.nilai)],["Jaminan",r.eks.jaminan]])}`:""}
     ${r.jenis==="toko"?`<div class="plabel">Toko tujuan</div>${kv([["Kode toko",r.toko&&r.toko.kode],["Nama toko",r.toko&&r.toko.nama],["Alamat",r.toko&&r.toko.alamat],["Dikirim via",r.kirim&&r.kirim.ekspedisi],["No. resi / SJ",r.kirim&&r.kirim.resi]])}`:""}
-    <div class="plabel">I. ${J.p1} <small>— selanjutnya disebut PIHAK PERTAMA</small></div>${party(r.p1)}
-    <div class="plabel">II. ${J.p2} <small>— selanjutnya disebut PIHAK KEDUA</small></div>${party(r.p2)}
+    <div class="plabel">I. ${J.p1} <small>— selanjutnya disebut PIHAK PERTAMA</small></div>${party(r.p1,"p1")}
+    <div class="plabel">II. ${J.p2} <small>— selanjutnya disebut PIHAK KEDUA</small></div>${party(r.p2,"p2")}
     <p>PIHAK PERTAMA ${r.jenis==="kembali"?"mengembalikan":r.jenis==="toko"?"mengirimkan":"menyerahkan"} kepada PIHAK KEDUA, dan PIHAK KEDUA menyatakan telah menerima dalam keadaan sesuai keterangan, aset berikut${r.jenis==="kembali"&&r.alasan?` dengan alasan pengembalian: <b>${esc(r.alasan)}</b>`:""}:</p>
     <div style="overflow-x:auto"><table class="at"><thead><tr><th class="num">No</th><th>Kategori</th><th>Merk / tipe</th><th>Kode aset</th><th>Serial number</th><th class="num">Qty</th><th>Kondisi</th></tr></thead><tbody>
       ${(r.items||[]).map((i,n)=>`<tr><td class="num">${n+1}</td><td>${esc(i.kategori)}</td><td>${esc(i.nama)}</td><td class="sn">${esc(i.kode||"-")}</td><td class="sn">${esc(i.sn||"-")}</td><td class="num">${esc(i.qty)}</td><td>${esc(i.kondisi)}</td></tr>`).join("")}
@@ -673,7 +712,7 @@ function docHTML(r,opts){
     </tbody></table></div>
     ${r.catatan?`<p><b>Kelengkapan &amp; catatan:</b> ${esc(r.catatan)}</p>`:""}
     ${(r.photos||[]).length?`<div class="plabel">Lampiran foto kondisi</div><div class="dphotos">${r.photos.map((p,i)=>`<img src="${esc(photoSrc(p))}" alt="Foto ${i+1}" crossorigin="anonymous">`).join("")}</div>`:""}
-    <p>${r.jenis==="karyawan"?"PIHAK KEDUA bertanggung jawab menjaga dan menggunakan aset tersebut untuk keperluan pekerjaan, serta wajib mengembalikannya kepada Divisi IT apabila tidak lagi bertugas atau diminta kembali.":r.jenis==="toko"?"Aset menjadi tanggung jawab toko tujuan sejak diterima. Kerusakan atau kekurangan wajib dilaporkan ke Divisi IT paling lambat 1×24 jam.":"Dengan ditandatanganinya berita acara ini, tanggung jawab PIHAK PERTAMA atas aset tersebut dinyatakan selesai, kecuali atas kondisi yang tercatat di atas."} Demikian ${J.title.toLowerCase().replace("berita acara ","berita acara ")} ini dibuat untuk dipergunakan sebagaimana mestinya.</p>
+    <p>${r.jenis==="eksternal"?`PIHAK KEDUA bertanggung jawab penuh atas aset tersebut selama berada dalam penguasaannya dan wajib mengembalikannya kepada Divisi IT K3Mart dalam kondisi yang sama${r.eks&&r.eks.kembaliPada?` paling lambat <b>${tglPanjang(r.eks.kembaliPada)}</b>`:""}. Kerusakan, kehilangan, atau keterlambatan pengembalian menjadi tanggung jawab PIHAK KEDUA.`:r.jenis==="terimaeks"?"Aset tersebut diterima dan dicatat oleh Divisi IT K3Mart. Pemeriksaan lanjutan atas kelengkapan dan kondisi aset dapat dilakukan paling lambat 3×24 jam sejak dokumen ini ditandatangani.":r.jenis==="karyawan"?"PIHAK KEDUA bertanggung jawab menjaga dan menggunakan aset tersebut untuk keperluan pekerjaan, serta wajib mengembalikannya kepada Divisi IT apabila tidak lagi bertugas atau diminta kembali.":r.jenis==="toko"?"Aset menjadi tanggung jawab toko tujuan sejak diterima. Kerusakan atau kekurangan wajib dilaporkan ke Divisi IT paling lambat 1×24 jam.":"Dengan ditandatanganinya berita acara ini, tanggung jawab PIHAK PERTAMA atas aset tersebut dinyatakan selesai, kecuali atas kondisi yang tercatat di atas."} Demikian ${J.title.toLowerCase().replace("berita acara ","berita acara ")} ini dibuat untuk dipergunakan sebagaimana mestinya.</p>
     <div class="dsig">${sig("p1","PIHAK PERTAMA<br>"+J.p1)}${sig("p2","PIHAK KEDUA<br>"+J.p2)}</div>
     <div class="dfoot"><span>Dokumen dibuat melalui aplikasi Tanda Terima Aset · Divisi IT K3Mart</span><span class="mono">${esc(r.no)}</span></div>
   </article>`;
@@ -685,6 +724,7 @@ function viewDetail(){
   return `<div class="dbar">
     <button class="btn ghost" data-act="back">${ICON.back}Riwayat</button>
     ${st==="selesai"?'<span class="pill ok"><i></i>Selesai</span>':'<span class="pill wait"><i></i>Menunggu TTD</span>'}
+    ${telat(r)?`<span class="pill late"><i></i>Lewat jatuh tempo ${tglPendek(r.eks.kembaliPada)}</span>`:""}
     <span class="sp"></span>
     <button class="btn" data-act="print">${ICON.print}Cetak</button>
     ${canSave()?`<button class="btn primary" data-act="pdf" id="pdfBtn">${ICON.pdf}Unduh PDF</button>`:""}
@@ -753,9 +793,9 @@ async function makePDF(r){
 async function exportCSV(){
   if(!canSave()){ toast("Unduhan tidak tersedia di tampilan ini",true); return; }
   const q=v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`;
-  const head=["No Dokumen","Tanggal","Jenis","Status","Pihak Pertama","Pihak Kedua","Kode Toko","Nama Toko","Kategori","Merk/Tipe","Kode Aset","Serial Number","Qty","Kondisi"];
+  const head=["No Dokumen","Tanggal","Jenis","Status","Pihak Pertama","Pihak Kedua","Kode Toko","Nama Toko","Perusahaan Eksternal","No PO/SPK","Wajib Kembali","Kategori","Merk/Tipe","Kode Aset","Serial Number","Qty","Kondisi"];
   const lines=[head.map(q).join(",")];
-  for(const r of filtered()) for(const i of (r.items||[])) lines.push([r.no,r.tanggal,JENIS[r.jenis].label,statusOf(r)==="selesai"?"Selesai":"Menunggu TTD",r.p1&&r.p1.nama,r.p2&&r.p2.nama,r.toko&&r.toko.kode,r.toko&&r.toko.nama,i.kategori,i.nama,i.kode,i.sn,i.qty,i.kondisi].map(q).join(","));
+  for(const r of filtered()) for(const i of (r.items||[])) lines.push([r.no,r.tanggal,JENIS[r.jenis].label,statusOf(r)==="selesai"?"Selesai":"Menunggu TTD",r.p1&&r.p1.nama,r.p2&&r.p2.nama,r.toko&&r.toko.kode,r.toko&&r.toko.nama,r.eks&&r.eks.perusahaan,r.eks&&r.eks.dokumen,r.eks&&r.eks.kembaliPada,i.kategori,i.nama,i.kode,i.sn,i.qty,i.kondisi].map(q).join(","));
   try{ await saveFile("tanda-terima-aset-"+todayISO()+".csv","﻿"+lines.join("\r\n")); toast("CSV disimpan"); }
   catch(e){ if(e&&e.code!=="declined") toast("CSV gagal: "+(e.message||""),true); }
 }
@@ -954,7 +994,7 @@ document.addEventListener("click",async e=>{
   else if(a==="fj"){ S.fj=t.dataset.v; rerenderList(); }
   else if(a==="fs"){ S.fs = S.fs===t.dataset.v?"semua":t.dataset.v; rerenderList(); }
   else if(a==="csv"){ exportCSV(); }
-  else if(a==="jenis"){ e.preventDefault(); const d=S.draft; if(d.jenis===t.dataset.v) return; const prevIT = d.jenis==="kembali"?"p2":"p1"; d.jenis=t.dataset.v; const newIT=d.jenis==="kembali"?"p2":"p1";
+  else if(a==="jenis"){ e.preventDefault(); const d=S.draft; if(d.jenis===t.dataset.v) return; const prevIT = itSide(d.jenis); d.jenis=t.dataset.v; const newIT=itSide(d.jenis);
       if(prevIT!==newIT){ const tmp=d.p1; d.p1=d.p2; d.p2=tmp; const ts=d.ttd.p1; d.ttd.p1=d.ttd.p2; d.ttd.p2=ts; }
       applyPetugas(d,petugas()); render(); }
   else if(a==="addItem"){ S.draft.items.push(newItem()); S.draft._dirty=true; renderItems(); const n=S.draft.items.length-1; const el=document.getElementById(`it${n}_nama`); if(el) el.focus(); }
@@ -965,7 +1005,7 @@ document.addEventListener("click",async e=>{
   else if(a==="signDoc"){ const r=S.records.find(x=>x.id===S.currentId); if(!r) return; const k=t.dataset.k;
       openPad(JENIS[r.jenis][k], r[k].nama, async url=>{ Backup.regrant(); const rec=JSON.parse(JSON.stringify(r)); rec.ttd=Object.assign({p1:"",p2:""},rec.ttd,{[k]:url}); rec.updatedAt=Date.now(); if(rec.ttd.p1&&rec.ttd.p2) rec.ttdAt=Date.now();
         try{ await Store.save(rec); toast(statusOf(rec)==="selesai"?"Lengkap — dokumen diterima":"Tanda tangan disimpan"); if(Store.mode==="db"){ const i=S.records.findIndex(x=>x.id===rec.id); if(i>-1){S.records[i]=rec;} render(); } }catch(err){ toast("Gagal menyimpan tanda tangan: "+(err.message||""),true); } }); }
-  else if(a==="edit"){ const r=S.records.find(x=>x.id===S.currentId); if(!r) return; const d=JSON.parse(JSON.stringify(r)); d.toko=d.toko||{kode:"",nama:"",alamat:""}; d.kirim=d.kirim||{ekspedisi:"",resi:""}; d.photos=d.photos||[]; d.ttd=d.ttd||{p1:"",p2:""}; d._hadSig=!!(d.ttd.p1||d.ttd.p2); d._dirty=false; S.draft=d; go("form"); }
+  else if(a==="edit"){ const r=S.records.find(x=>x.id===S.currentId); if(!r) return; const d=normDraft(JSON.parse(JSON.stringify(r))); d._hadSig=!!(d.ttd.p1||d.ttd.p2); d._dirty=false; S.draft=d; go("form"); }
   else if(a==="del"){ if(!t.classList.contains("armed")){ t.classList.add("armed"); t.textContent="Yakin hapus?"; setTimeout(()=>{ if(t.isConnected){t.classList.remove("armed");t.textContent="Hapus"} },4000); return; }
       const r=S.records.find(x=>x.id===S.currentId); if(!r) return; try{ await Store.remove(r); toast("Dokumen "+r.no+" dihapus"); go("list"); }catch(err){ toast("Gagal menghapus: "+(err.message||""),true); } }
   else if(a==="print"){ try{ window.print(); }catch(err){ toast("Cetak tidak tersedia di sini — gunakan Unduh PDF",true); } }
